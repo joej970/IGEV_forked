@@ -20,7 +20,9 @@ You can demo a trained model on pairs of images. To predict stereo for Middlebur
 python demo_imgs.py \
 --restore_ckpt pretrained_models/sceneflow/sceneflow.pth \
 -l=path/to/your/left_imgs \
--r=path/to/your/right_imgs
+-r=path/to/your/right_imgs¸
+
+python demo_imgs.py --restore_ckpt pretrained_models/sceneflow/sceneflow.pth -l=demo-imgs/Motorcycle/im00.png -r=demo-imgs/Motorcycle/im01.png
 ```
 or you can demo a trained model pairs of images for a video, run:
 ```Shell

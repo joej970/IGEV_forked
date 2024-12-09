@@ -1,6 +1,7 @@
 import sys
 sys.path.append('core')
-DEVICE = 'cuda'
+# DEVICE = 'cuda'
+DEVICE = 'cpu'
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import argparse
@@ -16,6 +17,26 @@ from matplotlib import pyplot as plt
 import os
 import cv2
 
+
+from prettytable import PrettyTable
+def count_parameters(model):
+    table = PrettyTable(["Modules", "Trainable", "Parameters"])
+    total_params = 0
+    total_trainable_params = 0
+    for name, parameter in model.named_parameters():
+        # if not parameter.requires_grad:
+        #     continue
+        params = parameter.numel()
+        table.add_row([name, parameter.requires_grad, params])
+        total_params += params
+        if parameter.requires_grad:
+            total_trainable_params += params
+    print(table)
+    print(f"          Total Params: {total_params}")
+    print(f"Total Trainable Params: {total_trainable_params}")
+    return total_params
+    
+
 def load_image(imfile):
     img = np.array(Image.open(imfile)).astype(np.uint8)
     img = torch.from_numpy(img).permute(2, 0, 1).float()
@@ -23,7 +44,13 @@ def load_image(imfile):
 
 def demo(args):
     model = torch.nn.DataParallel(IGEVStereo(args), device_ids=[0])
-    model.load_state_dict(torch.load(args.restore_ckpt))
+
+    count_parameters(model)
+
+    
+
+    # model.load_state_dict(torch.load(args.restore_ckpt))
+    model.load_state_dict(torch.load(args.restore_ckpt, map_location=torch.device('cpu')))
 
     model = model.module
     model.to(DEVICE)

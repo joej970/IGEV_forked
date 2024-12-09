@@ -4,6 +4,11 @@ from core.utils.utils import bilinear_sampler
 
 
 class Combined_Geo_Encoding_Volume:
+    """
+    First executes all pairs correlation between two feature maps, then reshapes GEV, 
+    and pools (downsamples) the GEV and correlation volume to increase the receptive field. 
+    It appends GEV and all-pair correlation to individual lists geo_volume_pyramid and init_corr_pyramid.
+    """
     def __init__(self, init_fmap1, init_fmap2, geo_volume, num_levels=2, radius=4):
         self.num_levels = num_levels
         self.radius = radius
@@ -44,7 +49,7 @@ class Combined_Geo_Encoding_Volume:
 
             disp_lvl = torch.cat([x0,y0], dim=-1)
             geo_volume = bilinear_sampler(geo_volume, disp_lvl)
-            geo_volume = geo_volume.view(b, h, w, -1)
+            geo_volume = geo_volume.view(b, h, w, -1) # .view reshapes contigous tensor by changing only the metadata and avoiding copying the data
 
             init_corr = self.init_corr_pyramid[i]
             init_x0 = coords.reshape(b*h*w, 1, 1, 1)/2**i - disp.reshape(b*h*w, 1, 1, 1) / 2**i + dx
@@ -54,7 +59,7 @@ class Combined_Geo_Encoding_Volume:
 
             out_pyramid.append(geo_volume)
             out_pyramid.append(init_corr)
-        out = torch.cat(out_pyramid, dim=-1)
+        out = torch.cat(out_pyramid, dim=-1) # Equation 5 in the paper
         return out.permute(0, 3, 1, 2).contiguous().float()
 
     

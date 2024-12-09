@@ -33,10 +33,10 @@ class ConvGRU(nn.Module):
     def forward(self, h, cz, cr, cq, *x_list):
 
         x = torch.cat(x_list, dim=1)
-        hx = torch.cat([h, x], dim=1)
-        z = torch.sigmoid(self.convz(hx) + cz)
-        r = torch.sigmoid(self.convr(hx) + cr)
-        q = torch.tanh(self.convq(torch.cat([r*h, x], dim=1)) + cq)
+        hx = torch.cat([h, x], dim=1) # Equation 6, line 1
+        z = torch.sigmoid(self.convz(hx) + cz) # cz = ck
+        r = torch.sigmoid(self.convr(hx) + cr) # cr = cr
+        q = torch.tanh(self.convq(torch.cat([r*h, x], dim=1)) + cq) # cq = ch
         h = (1-z) * h + z * q
         return h
 
@@ -89,7 +89,7 @@ class BasicMotionEncoder(nn.Module):
 
         cor_disp = torch.cat([cor, disp_], dim=1)
         out = F.relu(self.conv(cor_disp))
-        return torch.cat([out, disp], dim=1)
+        return torch.cat([out, disp], dim=1) # Equation 6, line 1, left part of the 3 member concat
 
 def pool2x(x):
     return F.avg_pool2d(x, 3, stride=2, padding=1)
@@ -124,11 +124,13 @@ class BasicMultiUpdateBlock(nn.Module):
             net[2] = self.gru16(net[2], *(inp[2]), pool2x(net[1]))
         if iter08:
             if self.args.n_gru_layers > 2:
+                # def forward(self, h, cz, cr, cq, *x_list):
                 net[1] = self.gru08(net[1], *(inp[1]), pool2x(net[0]), interp(net[2], net[1]))
+                # net[1] = self.gru08(net[1], *(inp[1]), pool2x(net[0]), interp(net[2], net[1]))
             else:
                 net[1] = self.gru08(net[1], *(inp[1]), pool2x(net[0]))
         if iter04:
-            motion_features = self.encoder(disp, corr)
+            motion_features = self.encoder(disp, corr) # Equation 6, first line; BasicMotionEncoder, enters the 3 GRU at the first GRU
             if self.args.n_gru_layers > 1:
                 net[0] = self.gru04(net[0], *(inp[0]), motion_features, interp(net[1], net[0]))
             else:

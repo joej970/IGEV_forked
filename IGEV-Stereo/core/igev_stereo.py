@@ -19,7 +19,12 @@ except:
         def __exit__(self, *args):
             pass
 
-class hourglass(nn.Module):
+
+class hourglass(nn.Module): 
+    """
+    3D regularization network. It convolves down 3 times and adds features as excitation to convolved values.
+    Then it deconvolves 3 times and adds aggregation layers (3x Basic convolution).
+    """
     def __init__(self, in_channels):
         super(hourglass, self).__init__()
 
@@ -66,7 +71,7 @@ class hourglass(nn.Module):
 
     def forward(self, x, features):
         conv1 = self.conv1(x)
-        conv1 = self.feature_att_8(conv1, features[1])
+        conv1 = self.feature_att_8(conv1, features[1]) # feature_att_8 excites cost volume with weights from features
 
         conv2 = self.conv2(conv1)
         conv2 = self.feature_att_16(conv2, features[2])
@@ -130,7 +135,8 @@ class IGEVStereo(nn.Module):
         self.corr_stem = BasicConv(8, 8, is_3d=True, kernel_size=3, stride=1, padding=1)
         self.corr_feature_att = FeatureAtt(8, 96)
         self.cost_agg = hourglass(8)
-        self.classifier = nn.Conv3d(8, 1, 3, 1, 1, bias=False)
+        # self.classifier = nn.Conv3d(8, 1, 3, 1, 1, bias=False)
+        self.classifier = nn.Conv3d(in_channels=8, out_channels=1, kernel_size=3, stride=1, padding=1, bias=False)
 
     def freeze_bn(self):
         for m in self.modules():
@@ -165,14 +171,14 @@ class IGEVStereo(nn.Module):
 
             match_left = self.desc(self.conv(features_left[0]))
             match_right = self.desc(self.conv(features_right[0]))
-            gwc_volume = build_gwc_volume(match_left, match_right, self.args.max_disp//4, 8)
-            gwc_volume = self.corr_stem(gwc_volume)
-            gwc_volume = self.corr_feature_att(gwc_volume, features_left[0])
-            geo_encoding_volume = self.cost_agg(gwc_volume, features_left)
+            gwc_volume = build_gwc_volume(match_left, match_right, self.args.max_disp//4, 8) # builds group-wise correlation volume
+            gwc_volume = self.corr_stem(gwc_volume) # gives BasicConv NN structure 
+            gwc_volume = self.corr_feature_att(gwc_volume, features_left[0]) # Adds Another BasicConv and Conv2d layer
+            geo_encoding_volume = self.cost_agg(gwc_volume, features_left) # Hourglass, 3D regularization network
 
             # Init disp from geometry encoding volume
-            prob = F.softmax(self.classifier(geo_encoding_volume).squeeze(1), dim=1)
-            init_disp = disparity_regression(prob, self.args.max_disp//4)
+            prob = F.softmax(self.classifier(geo_encoding_volume).squeeze(1), dim=1) # 3D Convolutional layer
+            init_disp = disparity_regression(prob, self.args.max_disp//4) # Eq. 4 from the article. d0=sum(range(0,max_disp)*prob)
             
             del prob, gwc_volume
 
@@ -182,26 +188,27 @@ class IGEVStereo(nn.Module):
                 spx_pred = self.spx(xspx)
                 spx_pred = F.softmax(spx_pred, 1)
 
-            cnet_list = self.cnet(image1, num_layers=self.args.n_gru_layers)
+            cnet_list = self.cnet(image1, num_layers=self.args.n_gru_layers) # context network
             net_list = [torch.tanh(x[0]) for x in cnet_list]
             inp_list = [torch.relu(x[1]) for x in cnet_list]
             inp_list = [list(conv(i).split(split_size=conv.out_channels//3, dim=1)) for i,conv in zip(inp_list, self.context_zqr_convs)]
-
+            #inp_list are context features generated from the context network (ck,cr,ch) or (cz;cq;cr) in the code
 
         geo_block = Combined_Geo_Encoding_Volume
         geo_fn = geo_block(match_left.float(), match_right.float(), geo_encoding_volume.float(), radius=self.args.corr_radius, num_levels=self.args.corr_levels)
         b, c, h, w = match_left.shape
         coords = torch.arange(w).float().to(match_left.device).reshape(1,1,w,1).repeat(b, h, 1, 1)
-        disp = init_disp
+        disp = init_disp # regressed with Conv3D from GEV
         disp_preds = []
 
         # GRUs iterations to update disparity
         for itr in range(iters):
             disp = disp.detach()
-            geo_feat = geo_fn(disp, coords)
+            geo_feat = geo_fn(disp, coords) # Indexing from current CGEV
             with autocast(enabled=self.args.mixed_precision):
-                net_list, mask_feat_4, delta_disp = self.update_block(net_list, inp_list, geo_feat, disp, iter16=self.args.n_gru_layers==3, iter08=self.args.n_gru_layers>=2)
-
+                # net_list, mask_feat_4, delta_disp = self.update_block(net_list, inp_list, geo_feat, disp, iter16=self.args.n_gru_layers==3, iter08=self.args.n_gru_layers>=2)
+                net_list, mask_feat_4, delta_disp = self.update_block(net_list, inp_list, corr = geo_feat, disp = disp, iter16=self.args.n_gru_layers==3, iter08=self.args.n_gru_layers>=2)
+                # BasicMultiUpdateBlock
             disp = disp + delta_disp
             if test_mode and itr < iters-1:
                 continue

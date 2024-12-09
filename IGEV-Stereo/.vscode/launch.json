@@ -1,0 +1,58 @@
+{
+    "configurations": [
+
+        
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch demo_imgs.py",
+            "program": "${workspaceFolder}/demo_imgs.py",
+            "args": [
+                "--restore_ckpt",
+                "${workspaceFolder}/pretrained_models/sceneflow/sceneflow.pth",
+                "-l",
+                "${workspaceFolder}/demo-imgs/Motorcycle/im0.png",
+                "-r",
+                "${workspaceFolder}/demo-imgs/Motorcycle/im1.png"
+            ]
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch evaluate_model_complexity.py",
+            "program": "${workspaceFolder}/evaluate_model_complexity.py",
+            "args": [
+                "--restore_ckpt",
+                "${workspaceFolder}/pretrained_models/sceneflow/sceneflow.pth",
+                "-l",
+                "${workspaceFolder}/demo-imgs/Motorcycle/im0.png",
+                "-r",
+                "${workspaceFolder}/demo-imgs/Motorcycle/im1.png",
+                // "--mixed_precision",
+                "--valid_iters","32",
+                "--hidden_dims","64","64","64",
+                "--n_gru_layers", "3",
+                "--max_disp","192",
+            ]
+        },
+        {
+            "type": "debugpy",
+            "request": "launch",
+            "name": "Launch evaluate_stereo.py",
+            "program": "${workspaceFolder}/evaluate_stereo.py",
+            "args": [
+                "--restore_ckpt",
+                "${workspaceFolder}/pretrained_models/sceneflow/sceneflow.pth",
+                "-l",
+                "${workspaceFolder}/demo-imgs/Motorcycle/im0.png",
+                "-r",
+                "${workspaceFolder}/demo-imgs/Motorcycle/im1.png",
+                // "--mixed_precision",
+                "--valid_iters","32",
+                "--hidden_dims","64","64","64",
+                "--n_gru_layers", "3",
+                "--max_disp","192",
+            ]
+        }
+    ]
+}

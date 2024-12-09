@@ -5,8 +5,8 @@ import numpy as np
 
 
 
-
-class BasicConv(nn.Module):
+# Conv/deconv layer with optional batch normalization and relu (included by default, can be skipped)
+class BasicConv(nn.Module): 
 
     def __init__(self, in_channels, out_channels, deconv=False, is_3d=False, bn=True, relu=True, **kwargs):
         super(BasicConv, self).__init__()
@@ -222,8 +222,8 @@ def disparity_regression(x, maxdisp):
     disp_values = disp_values.view(1, maxdisp, 1, 1)
     return torch.sum(x * disp_values, 1, keepdim=True)
 
-
-class FeatureAtt(nn.Module):
+# BasicConv(Conv_3D + BN + ReLU) + Conv2d + Sigmoid activation, then multiply with input layer
+class FeatureAtt(nn.Module): 
     def __init__(self, cv_chan, feat_chan):
         super(FeatureAtt, self).__init__()
 
