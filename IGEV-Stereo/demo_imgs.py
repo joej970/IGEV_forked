@@ -1,9 +1,10 @@
 import sys
 sys.path.append('core')
-# DEVICE = 'cuda'
-DEVICE = 'cpu'
+sys.path.append('IGEV-Stereo/core')
+DEVICE = 'cuda'
+# DEVICE = 'cpu'
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 import argparse
 import glob
 import numpy as np
@@ -50,7 +51,7 @@ def demo(args):
     
 
     # model.load_state_dict(torch.load(args.restore_ckpt))
-    model.load_state_dict(torch.load(args.restore_ckpt, map_location=torch.device('cpu')))
+    model.load_state_dict(torch.load(args.restore_ckpt, map_location=torch.device(DEVICE)))
 
     model = model.module
     model.to(DEVICE)

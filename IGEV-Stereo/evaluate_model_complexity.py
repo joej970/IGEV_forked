@@ -8,19 +8,44 @@ from pathlib import Path
 from igev_stereo import IGEVStereo
 from prettytable import PrettyTable
 from utils.utils import InputPadder
+import logging
 
 import numpy as np
 from PIL import Image
 import torch
-DEVICE = 'cpu'
+# DEVICE = 'cpu'
+DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 from fvcore.nn import FlopCountAnalysis
-import torchprofile
+# import torchprofile
 import json
 
+try:
+    autocast = torch.cuda.amp.autocast
+except:
+    class autocast:
+        def __init__(self, enabled):
+            pass
+        def __enter__(self):
+            pass
+        def __exit__(self, *args):
+            pass
+
+
+def remove_module_prefix(state_dict):
+    new_state_dict = {}
+    for k, v in state_dict.items():
+        if k.startswith('module.'):
+            new_state_dict[k[7:]] = v  # Remove 'module.' prefix
+        else:
+            new_state_dict[k] = v
+    return new_state_dict
 
 def load_image(imfile):
     img = np.array(Image.open(imfile)).astype(np.uint8)
+    # if has 3 channels, discard the fourth
+    if img.shape[2] == 4:
+        img = img[:,:,:3]
     img = torch.from_numpy(img).permute(2, 0, 1).float()
     return img[None].to(DEVICE)
 
@@ -57,28 +82,78 @@ class ModelWrapper(torch.nn.Module):
     def forward(self, image1, image2):
         return self.model(image1, image2, iters=self.args.valid_iters, test_mode=True)
 
-
+@torch.no_grad()
 def report_model_complexity():
-    model = torch.nn.DataParallel(IGEVStereo(args), device_ids=[0])
+    # args.n_downsample = 2
+    # args.hidden_dims = [128]*3
+    # args.corr_levels = 2
+    # args.corr_radius = 4
+    # args.n_gru_layers = 3
+    # args.max_disp = 192
+    # args.restore_ckpt = './pretrained_models/sceneflow/sceneflow.pth'
+    # args.valid_iters = 32
+    # args.mixed_precision = True
 
-    model = model.module
+
+    # model = torch.nn.DataParallel(IGEVStereo(args), device_ids=[0])
+    model = IGEVStereo(args)
+
+    state_dict = torch.load(args.restore_ckpt, map_location=torch.device(DEVICE))
+
+    state_dict = remove_module_prefix(state_dict)
+    model.load_state_dict(state_dict)
+
+    # model.load_state_dict(torch.load(args.restore_ckpt, map_location=torch.device(DEVICE)))
+    logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s')
+    # if args.restore_ckpt is not None:
+    #     assert args.restore_ckpt.endswith(".pth")
+    #     logging.info("Loading checkpoint...")
+    #     checkpoint = torch.load(args.restore_ckpt)
+    #     model.load_state_dict(checkpoint, strict=True)
+    #     logging.info(f"Done loading checkpoint")
+
+    # model = model.module
+    model.to(DEVICE)
+    model.eval()
 
     total_params = count_parameters(model)
+    print(f"The model has {format(total_params/1e6, '.2f')}M learnable parameters.")
 
 
-    count_parameters(model)
 
-
-    
+    ######################
+    # My images
     # Calculate FLOPS
     image1 = load_image(args.left_imgs)
     image2 = load_image(args.right_imgs)
+    ##############################
+
 
     padder = InputPadder(image1.shape, divis_by=32)
     image1, image2 = padder.pad(image1, image2)
 
+    with torch.amp.autocast('cuda', enabled=args.mixed_precision):
+        disp = model(image1, image2, iters=args.valid_iters, test_mode=True)
+
+    from torchviz import make_dot
+    dot = make_dot(disp, params=dict(model.named_parameters()))
+    dot.format = 'png'
+    dot.render('model_graph')
+
+
+
+    print(torch.cuda.memory_summary())
+    
     print("fvcore FlopCountAnalysis")
     model = ModelWrapper(model, args)
+
+    # output = model(image1, image2)
+    # from torchviz import make_dot
+    # dot = make_dot(output, params=dict(model.named_parameters()))
+    # dot.format = 'png'
+    # dot.render('model_graph')
+
     flops = FlopCountAnalysis(model, (image1, image2))
     model_statistics_json = flops.by_module()
     # print(json.dumps(model_statistics_json, indent=4))
@@ -126,7 +201,7 @@ if __name__ == '__main__':
     # parser.add_argument('-l', '--left_imgs', help="path to all first (left) frames", default="/data/ETH3D/two_view_training/*/im0.png")
     # parser.add_argument('-r', '--right_imgs', help="path to all second (right) frames", default="/data/ETH3D/two_view_training/*/im1.png")
     parser.add_argument('--output_directory', help="directory to save output", default="./demo-output/")
-    parser.add_argument('--mixed_precision', action='store_true', help='use mixed precision')
+    parser.add_argument('--mixed_precision', default=True, action='store_true', help='use mixed precision')
     parser.add_argument('--valid_iters', type=int, default=32, help='number of flow-field updates during forward pass')
 
     # Architecture choices

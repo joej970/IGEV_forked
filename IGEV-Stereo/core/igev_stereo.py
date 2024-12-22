@@ -9,7 +9,8 @@ import time
 
 
 try:
-    autocast = torch.cuda.amp.autocast
+    # autocast = torch.cuda.amp.autocast
+    autocast = lambda enabled: torch.amp.autocast('cuda', enabled=enabled)
 except:
     class autocast:
         def __init__(self, enabled):
@@ -159,6 +160,9 @@ class IGEVStereo(nn.Module):
 
         image1 = (2 * (image1 / 255.0) - 1.0).contiguous()
         image2 = (2 * (image2 / 255.0) - 1.0).contiguous()
+
+        image_concat = torch.cat((image1, image2), dim=0)
+        print(image_concat.shape)
         with autocast(enabled=self.args.mixed_precision):
             features_left = self.feature(image1)
             features_right = self.feature(image2)

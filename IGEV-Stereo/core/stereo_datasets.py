@@ -141,9 +141,15 @@ class SceneFlowDatasets(StereoDataset):
         original_length = len(self.disparity_list)
         # root = osp.join(self.root, 'FlyingThings3D')
         root = self.root
-        left_images = sorted( glob(osp.join(root, self.dstype, split, '*/*/left/*.png')) )
+        # print(osp.join(root, self.dstype, split, '*/*/left/*.png'))
+        search_string = osp.join(root, self.dstype, split, '*/*/*/left/*.webp')
+        search_string = os.getcwd() + search_string
+        print(search_string)
+        # left_images = sorted( glob(osp.join(root, self.dstype, split, '*/*/left/*.png')) )
+        left_images = sorted( glob(search_string) )
         right_images = [ im.replace('left', 'right') for im in left_images ]
-        disparity_images = [ im.replace(self.dstype, 'disparity').replace('.png', '.pfm') for im in left_images ]
+        # disparity_images = [ im.replace(self.dstype, 'disparity').replace('.png', '.pfm') for im in left_images ]
+        disparity_images = [ im.replace(self.dstype, 'disparity').replace('.webp', '.pfm') for im in left_images ]
 
         state = np.random.get_state()
         np.random.seed(1000)

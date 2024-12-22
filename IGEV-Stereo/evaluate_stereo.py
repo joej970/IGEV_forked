@@ -135,8 +135,10 @@ def validate_sceneflow(model, iters=32, mixed_prec=False):
         padder = InputPadder(image1.shape, divis_by=32)
         image1, image2 = padder.pad(image1, image2)
 
-        with autocast(enabled=mixed_prec):
+        # with autocast(enabled=mixed_prec):
+        with torch.amp.autocast('cuda', enabled=args.mixed_precision):
             flow_pr = model(image1, image2, iters=iters, test_mode=True)
+
         flow_pr = padder.unpad(flow_pr).cpu().squeeze(0)
         assert flow_pr.shape == flow_gt.shape, (flow_pr.shape, flow_gt.shape)
 
