@@ -1,3 +1,4 @@
+python_version == 3.8.2
 fvcore==0.1.5.post20221221
 imageio==2.35.1
 matplotlib==3.7.5
