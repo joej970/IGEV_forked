@@ -23,7 +23,8 @@ dependencies:
   - cuda-opencl-dev=12.4.127
   - cuda-profiler-api=12.4.127
   - cuda-runtime=12.4.1
-  - cudatoolkit=11.3.1
+  # - cudatoolkit=11.3.1
+  - cudatoolkit=11.8.0
   - filelock=3.13.1
   - freetype=2.12.1
   - giflib=5.2.2
@@ -45,7 +46,8 @@ dependencies:
   - libcusparse=12.3.1.170
   - libcusparse-dev=12.3.1.170
   - libdeflate=1.17
-  - libffi=3.4.4
+  # - libffi=3.3.1
+  - libffi
   - libjpeg-turbo=2.0.0
   - libnpp=12.2.5.30
   - libnpp-dev=12.2.5.30
@@ -79,8 +81,9 @@ dependencies:
   - pip
   - prettytable=3.5.0
   - pysocks=1.7.1
-  - python=3.8
-  - pytorch=2.4.1
+  # - python=3.8
+  - python=3.10
+  - pytorch=2.5.1
   - pytorch-cuda=12.4
   - pytorch-mutex=1.0
   - pyyaml=6.0.2
@@ -123,7 +126,7 @@ dependencies:
       - pyasn1-modules==0.4.1
       - pyparsing==3.1.4
       - python-dateutil==2.9.0.post0
-      - python-graphviz==0.15.0
+      - graphviz==0.20.3
       - pywavelets==1.4.1
       - requests-oauthlib==2.0.0
       - rsa==4.9
@@ -136,10 +139,13 @@ dependencies:
       - termcolor==2.4.0
       - tifffile==2023.7.10
       - timm==0.5.4
-      - torchaudio==2.4.1
-      - torchvision==0.20.0
+      # - timm
+      # - torchaudio==2.4.1
+      # - torchvision==0.20.1
+      - torchvision
       - torchviz==0.0.3
       - tqdm==4.67.1
       - werkzeug==3.0.6
       - yacs==0.1.8
       - zipp==3.20.2
+      - opt-einsum
