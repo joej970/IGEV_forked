@@ -234,9 +234,9 @@ class FeatureAtt(nn.Module):
     def forward(self, cv, feat):
         '''
         '''
-        feat_att = self.feat_att(feat).unsqueeze(2)
-        cv = torch.sigmoid(feat_att)*cv
-        return cv
+        feat_att = self.feat_att(feat).unsqueeze(2) # adds a dimension at 2nd position # (B, 8, 1, H, W)
+        cv = torch.sigmoid(feat_att)*cv # * does broadcasing (e.g. copying along a dimension)
+        return cv # (B, 8, 8, H, W)
 
 def context_upsample(disp_low, up_weights):
     ###
