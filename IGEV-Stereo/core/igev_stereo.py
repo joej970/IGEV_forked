@@ -201,6 +201,7 @@ class IGEVStereo(nn.Module):
         geo_block = Combined_Geo_Encoding_Volume
         geo_fn = geo_block(match_left.float(), match_right.float(), geo_encoding_volume.float(), radius=self.args.corr_radius, num_levels=self.args.corr_levels)
         b, c, h, w = match_left.shape
+        # coordinates along width axis repeated for each height and batch, shape (b, h, w, 1)
         coords = torch.arange(w).float().to(match_left.device).reshape(1,1,w,1).repeat(b, h, 1, 1)
         disp = init_disp # regressed with Conv3D from GEV
         disp_preds = []

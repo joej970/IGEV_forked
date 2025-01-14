@@ -243,10 +243,13 @@ def context_upsample(disp_low, up_weights):
     # cv (b,1,h,w)
     # sp (b,9,4*h,4*w)
     ###
-    b, c, h, w = disp_low.shape
-        
-    disp_unfold = F.unfold(disp_low.reshape(b,c,h,w),3,1,1).reshape(b,-1,h,w)
-    disp_unfold = F.interpolate(disp_unfold,(h*4,w*4),mode='nearest').reshape(b,9,h*4,w*4)
+    b, c, h, w = disp_low.shape # c = 1
+    
+    # unfolds 2D image in columns that each combine the pixels captured by the kernel
+    disp_unfold = F.unfold(disp_low.reshape(b,c,h,w),3,1,1) # [b, c * 9, h * w] 
+    disp_unfold = disp_unfold.reshape(b,-1,h,w) # [b, c * 9, h, w]
+    disp_unfold = F.interpolate(disp_unfold,(h*4,w*4),mode='nearest') # [b, c * 9, h*4, w*4]
+    disp_unfold = disp_unfold.reshape(b,9,h*4,w*4) # [b, 9, h*4, w*4]
 
     disp = (disp_unfold*up_weights).sum(1)
         

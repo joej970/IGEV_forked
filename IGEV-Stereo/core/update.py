@@ -30,7 +30,11 @@ class ConvGRU(nn.Module):
         self.convr = nn.Conv2d(hidden_dim+input_dim, hidden_dim, kernel_size, padding=kernel_size//2)
         self.convq = nn.Conv2d(hidden_dim+input_dim, hidden_dim, kernel_size, padding=kernel_size//2)
 
-    def forward(self, h, cz, cr, cq, *x_list):
+    # h = hidden state
+    # cz, cr, cq = context features from cnet
+    # x_list = [Encoder_g(Gf), Encoder_d(d_k), d_k]: geomertry features, disparity features, disparity
+    
+    def forward(self, h, cz, cr, cq, *x_list): 
 
         x = torch.cat(x_list, dim=1)
         hx = torch.cat([h, x], dim=1) # Equation 6, line 1
@@ -74,7 +78,7 @@ class BasicMotionEncoder(nn.Module):
     def __init__(self, args):
         super(BasicMotionEncoder, self).__init__()
         self.args = args
-        cor_planes = args.corr_levels * (2*args.corr_radius + 1) * (8+1)
+        cor_planes = args.corr_levels * (2*args.corr_radius + 1) * (8+1) # 2*(2*4+1)*9 = 162
         self.convc1 = nn.Conv2d(cor_planes, 64, 1, padding=0)
         self.convc2 = nn.Conv2d(64, 64, 3, padding=1)
         self.convd1 = nn.Conv2d(1, 64, 7, padding=3)
@@ -124,7 +128,7 @@ class BasicMultiUpdateBlock(nn.Module):
             net[2] = self.gru16(net[2], *(inp[2]), pool2x(net[1]))
         if iter08:
             if self.args.n_gru_layers > 2:
-                # def forward(self, h, cz, cr, cq, *x_list):
+                # def forward(self, h, cz, cr, cq, *x_list): return h, # cz, cr, cq = context features from cnet, x_list = [Encoder_g(Gf), Encoder_d(d_k), d_k]: geomertry features, disparity features, disparity
                 net[1] = self.gru08(net[1], *(inp[1]), pool2x(net[0]), interp(net[2], net[1]))
                 # net[1] = self.gru08(net[1], *(inp[1]), pool2x(net[0]), interp(net[2], net[1]))
             else:

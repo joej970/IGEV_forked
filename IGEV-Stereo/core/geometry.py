@@ -20,9 +20,10 @@ class Combined_Geo_Encoding_Volume:
 
         b, h, w, _, w2 = init_corr.shape
         b, c, d, h, w = geo_volume.shape
-        geo_volume = geo_volume.permute(0, 3, 4, 1, 2).reshape(b*h*w, c, 1, d)
+        geo_volume = geo_volume.permute(0, 3, 4, 1, 2)  # (b, h, w, c, d)
 
-        init_corr = init_corr.reshape(b*h*w, 1, 1, w2)
+        geo_volume = geo_volume.reshape(b*h*w, c, 1, d) # (b*h*w, c, 1, d)
+        init_corr = init_corr.reshape(b*h*w, 1, 1, w2) # (b*h*w, 1, 1, w2)
         self.geo_volume_pyramid.append(geo_volume)
         self.init_corr_pyramid.append(init_corr)
         for i in range(self.num_levels-1):
@@ -35,7 +36,7 @@ class Combined_Geo_Encoding_Volume:
 
 
 
-
+    """ disp is used to sample the geo_volume, coords to sample all pairs correlation"""
     def __call__(self, disp, coords):
         r = self.radius
         b, _, h, w = disp.shape
@@ -43,8 +44,8 @@ class Combined_Geo_Encoding_Volume:
         for i in range(self.num_levels):
             geo_volume = self.geo_volume_pyramid[i]
             dx = torch.linspace(-r, r, 2*r+1)
-            dx = dx.view(1, 1, 2*r+1, 1).to(disp.device)
-            x0 = dx + disp.reshape(b*h*w, 1, 1, 1) / 2**i
+            dx = dx.view(1, 1, 2*r+1, 1).to(disp.device) # third dim of disp is 
+            x0 = dx + disp.reshape(b*h*w, 1, 1, 1) / 2**i # /2, /4
             y0 = torch.zeros_like(x0)
 
             disp_lvl = torch.cat([x0,y0], dim=-1)
